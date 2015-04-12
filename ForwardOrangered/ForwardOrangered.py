@@ -45,14 +45,15 @@ def read_accounts_config():
 				acc = line.split("\t")
 				if len(acc) < 5:
 					print("not enough info for account", acc[0], ". Format is: username password forward_to reset_orangered active (with one tab between values)")
-				if bool(acc[4]):
+				
+				if acc[4].strip().lower() == "true":
 					r = praw.Reddit(USERAGENT)
 					try:
-						r.login(acc[0], acc[1])
+						r.login(acc[0].strip(), acc[1].strip())
 					except praw.errors.InvalidUserPass:
 						print("Wrong password for account", acc[0])
 					else:
-						accounts.append((r, acc[2], bool(acc[3])))
+						accounts.append((r, acc[2].strip(), acc[3].strip().lower() == "true"))
 					
 	except OSError:
 		print(ACCOUNTS_CONFIGFILE, "not found.")
@@ -97,7 +98,7 @@ def run_bot():
 				message = ""
 				message_count = 0
 				done = read_config_done(account[0].user.name)
-				for msg in account[0].get_unread(account[2], account[2]):
+				for msg in account[0].get_unread():
 					if msg.name in done:
 						continue
 					if msg.context:
