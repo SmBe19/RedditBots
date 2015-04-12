@@ -4,7 +4,6 @@ Written by /u/SmBe19
 """
 
 import praw
-import time
 
 # ### USER CONFIGURATION ### #
 

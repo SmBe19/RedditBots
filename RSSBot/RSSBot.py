@@ -99,19 +99,15 @@ def run_bot():
 						print("submit article")
 					done.append(article[2])
 			
-			write_config_done(done)
-			
-			print("sleep for", SLEEP, "s")
-			time.sleep(SLEEP)
-			
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			write_config_done(done)
 			print("Exception", e)
-			print("sleep for", SLEEP, "s")
-			time.sleep(SLEEP)
+			
+		write_config_done(done)
+		print("sleep for", SLEEP, "s")
+		time.sleep(SLEEP)
 		
 	write_config_done(done)
 	
