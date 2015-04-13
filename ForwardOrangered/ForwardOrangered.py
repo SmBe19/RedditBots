@@ -101,7 +101,7 @@ def run_bot():
 					if msg.name in done:
 						continue
 					if msg.context:
-						this_message = "Comment from /u/{0}. [Link](http://reddit.com{1})\n\n".format(msg.author.name, msg.context)
+						this_message = "Comment from /u/{0}. [Link]({1}?context=10000)\n\n".format(msg.author.name, msg.permalink)
 					else:
 						this_message = "Message from /u/{0} ({1}).\n\n".format(msg.author.name, msg.subject)
 					for line in msg.body.split("\n"):
