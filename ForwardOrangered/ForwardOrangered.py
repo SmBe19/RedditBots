@@ -5,6 +5,7 @@ Written by /u/SmBe19
 
 import praw
 import time
+from getpass import getpass
 
 # ### USER CONFIGURATION ### #
 
@@ -131,9 +132,9 @@ def run_bot():
 if __name__ == "__main__":
 	if not USERNAME:
 		print("missing username")
-	elif not PASSWORD:
-		print("missing password")
 	elif not USERAGENT:
 		print("missing useragent")
 	else:
+		if not PASSWORD:
+			PASSWORD = getpass()
 		run_bot()

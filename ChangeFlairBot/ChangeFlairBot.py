@@ -4,6 +4,7 @@ Written by /u/SmBe19
 """
 
 import praw
+from getpass import getpass
 
 # ### USER CONFIGURATION ### #
 
@@ -90,8 +91,6 @@ def run_bot():
 if __name__ == "__main__":
 	if not USERNAME:
 		print("missing username")
-	elif not PASSWORD:
-		print("missing password")
 	elif not USERAGENT:
 		print("missing useragent")
 	elif not SUBREDDIT:
@@ -99,4 +98,6 @@ if __name__ == "__main__":
 	elif not OLD_FLAIR_CSS and not OLD_FLAIR_TEXT:
 		print("old flair not set")
 	else:
+		if not PASSWORD:
+			PASSWORD = getpass()
 		run_bot()

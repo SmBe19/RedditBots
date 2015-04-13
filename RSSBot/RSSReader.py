@@ -18,9 +18,23 @@ def get_new_articles(source):
 			# pubDate = item.find("pubDate").text
 			# pubDateConv = mktime(time.strptime(pubDate, PUBDATEFORMAT)))
 			
-			title = item.find("title").text
 			link = item.find("link").text
-			guid = item.find("guid").text
+			
+			title = item.find("title")
+			
+			if title is not None:
+				title = title.text
+			if title is None:
+				print("found no title, will use link")
+				title = link
+			
+			guid = item.find("guid")
+			
+			if guid is not None:
+				guid = guid.text
+			if guid is None:
+				#print("found no guid, will use link")
+				guid = link
 			articles.append((title, link, guid))
 		
 	except URLError as e:

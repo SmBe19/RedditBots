@@ -5,6 +5,7 @@ Written by /u/SmBe19
 
 import praw
 import time
+from getpass import getpass
 import RSSReader
 
 # ### USER CONFIGURATION ### #
@@ -23,6 +24,9 @@ SUBREDDIT = ""
 
 # The time in seconds the bot should sleep until it checks again.
 SLEEP = 60*60
+
+# If True, the bot will submit a link even if reddit says it was already submitted. This can be the case if it was submitted in an other subreddit or by an other user, or if the bot failed with keeping track of already submitted articles (shouldn't be the case).
+RESUBMIT_ANYWAYS = True
 
 # ### END USER CONFIGURATION ### #
 
@@ -71,7 +75,11 @@ def write_config_done(done):
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	r.login(USERNAME, PASSWORD)
+	try:
+		r.login(USERNAME, PASSWORD)
+	except praw.errors.InvalidUserPass:
+		print("Wrong password")
+		return
 	sub = r.get_subreddit(SUBREDDIT)
 	
 	print("Start bot for subreddit", SUBREDDIT)
@@ -89,13 +97,13 @@ def run_bot():
 			
 			for article in newArticles:
 				if article[2] not in done:
+					done.append(article[2])
 					try:
-						sub.submit(article[0], url=article[1])
+						sub.submit(article[0], url=article[1], resubmit=RESUBMIT_ANYWAYS)
 					except praw.errors.AlreadySubmitted:
 						print("already submitted")
 					else:
 						print("submit article")
-					done.append(article[2])
 			
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
@@ -113,11 +121,11 @@ def run_bot():
 if __name__ == "__main__":
 	if not USERNAME:
 		print("missing username")
-	elif not PASSWORD:
-		print("missing password")
 	elif not USERAGENT:
 		print("missing useragent")
 	elif not SUBREDDIT:
 		print("missing subreddit")
 	else:
+		if not PASSWORD:
+			PASSWORD = getpass()
 		run_bot()
