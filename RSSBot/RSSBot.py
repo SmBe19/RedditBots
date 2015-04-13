@@ -60,8 +60,6 @@ def read_config_done():
 					done.append(line.strip())
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
-		with open(DONE_CONFIGFILE, "w") as f:
-			pass
 	return done
 	
 def write_config_done(done):

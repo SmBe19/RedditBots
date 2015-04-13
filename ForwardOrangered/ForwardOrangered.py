@@ -68,8 +68,6 @@ def read_config_done(account):
 					done.append(line.strip())
 	except OSError:
 		print(DONE_CONFIGFILE.format(account), "not found.")
-		with open(DONE_CONFIGFILE.format(account), "w") as f:
-			pass
 	return done
 	
 def write_config_done(done, account):
