@@ -7,20 +7,55 @@ CONFIG_WIKIPAGE = "schedulebot-config"
 # ### END BOT CONFIGURATION ### #
 
 class ScheduledPost:
-	def __init__(self, first, title="Scheduled Post", text="Scheduled Post", repeat=-1, sticky=False):
+	def __init__(self, first, title="Scheduled Post", text="Scheduled Post", repeat="-1", distinguish="False", sticky="False", contest_mode="False"):
 		self.first = first
-		self.repeat = repeat
-		self.sticky = sticky
 		self.title = title
 		self.text = text
+		self.repeat = repeat
+		self.distinguish = distinguish.lower() == "true"
+		self.sticky = sticky.lower() == "true"
+		self.contest_mode = contest_mode.lower() == "true"
+		
+		try:
+			self.first = time.mktime(time.strptime(self.first, "%d.%m.%Y %H:%M %z"))
+		except ValueError:
+			self.first = time.mktime(time.strptime(self.first, "%d.%m.%Y %H:%M"))
+		
+		num = int(repeat.split(" ")[0])
+		unit = repeat.split(" ")[-1].lower()
+		if unit == "years":
+			num *= 365*24*60*60
+		elif unit == "months":
+			num *= 30*24*60*60
+		elif unit == "weeks":
+			num *= 7*24*60*60
+		elif unit == "days":
+			num *= 24*60*60
+		elif unit == "hours":
+			num *= 60*60
+		elif unit == "minutes":
+			num *= 60
+		elif unit == "seconds":
+			num *= 1
+		else:
+			num = -1
+		
+		self.repeat = num
 		
 	def get_time_until_next_post(self):
 		diff = time.time() - self.first
+		if diff < 0:
+			return -diff
+		if self.repeat < 0:
+			return float("inf")
 		used = diff % self.repeat
 		return self.repeat - used
 	
 	def get_next_post_time(self):
 		return time.time() + get_time_until_next_post(self)
+		
+def repl_indentation(matchobj):
+	return "\r" * matchobj.group(0).count(matchobj.group(1))
 		
 def read_config(sub):
 	scheduled_posts = []
@@ -34,16 +69,24 @@ def read_config(sub):
 		print("Error: Could not define indentation")
 		return scheduled_posts
 	indentation = match.group(0)
-	rules = [re.sub("^(?:{0})+".format(indentation), "\r", rule) for rule in rules]
 	for rule in rules:
-		lines = rule.split("\n")
+		lines = [re.sub("^({0})+".format(indentation), repl_indentation, line) for line in rule.split("\n")]
 		properties = {}
 		last_property = ""
 		for line in lines:
 			level = line.count("\r")
 			if level == 1:
-				last_property = line.replace("\r", "").split(": ")[0].lower()
-				properties[last_property] = line.replace("\r" + last_property + ": ", "")
-			else
-				properties[last_property] += "\n" + line.replace("\r", "")
+				last_property = line.replace("\r", "").split(": ")[0].strip().lower()
+				properties[last_property] = line.replace("\r", "")[len(last_property) + 2:].strip()
+			else:
+				properties[last_property] += "\n" + line.replace("\r", "").strip()
 				
+		for key in properties:
+			if properties[key].startswith("|\n"):
+				properties[key] = properties[key][2:]
+		
+		scheduled_posts.append(ScheduledPost(**properties))
+		#scheduled_posts.append(ScheduledPost(properties["first"], properties["title"], properties["text"] if "text" in properties else None, properties["repeat"] if "repeat" in properties else None,
+		#properties["distinguish"] if "distinguish" in properties else None, properties["sticky"] if "sticky" in properties else None, properties["contest_mode"] if "contest_mode" in properties else None))
+		
+	return scheduled_posts
