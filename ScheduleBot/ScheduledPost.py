@@ -7,11 +7,14 @@ CONFIG_WIKIPAGE = "schedulebot-config"
 # ### END BOT CONFIGURATION ### #
 
 class ScheduledPost:
-	def __init__(self, first, title="Scheduled Post", text="Scheduled Post", repeat="-1", distinguish="False", sticky="False", contest_mode="False"):
+	def __init__(self, first, title="Scheduled Post", text="Scheduled Post", repeat="-1", times="-1", flair_text="", flair_css="", distinguish="False", sticky="False", contest_mode="False"):
 		self.first = first
 		self.title = title
 		self.text = text
 		self.repeat = repeat
+		self.times = int(times)
+		self.flair_text = flair_text
+		self.flair_css = flair_css
 		self.distinguish = distinguish.lower() == "true"
 		self.sticky = sticky.lower() == "true"
 		self.contest_mode = contest_mode.lower() == "true"
@@ -48,6 +51,9 @@ class ScheduledPost:
 			return -diff
 		if self.repeat < 0:
 			return float("inf")
+		if self.times > 0:
+			if diff // self.repeat >= self.times:
+				return float("inf")
 		used = diff % self.repeat
 		return self.repeat - used
 	
@@ -84,9 +90,10 @@ def read_config(sub):
 		for key in properties:
 			if properties[key].startswith("|\n"):
 				properties[key] = properties[key][2:]
-		
-		scheduled_posts.append(ScheduledPost(**properties))
-		#scheduled_posts.append(ScheduledPost(properties["first"], properties["title"], properties["text"] if "text" in properties else None, properties["repeat"] if "repeat" in properties else None,
-		#properties["distinguish"] if "distinguish" in properties else None, properties["sticky"] if "sticky" in properties else None, properties["contest_mode"] if "contest_mode" in properties else None))
+			# print(key, ":", properties[key])
+		try:
+			scheduled_posts.append(ScheduledPost(**properties))
+		except TypeError:
+			print("Rule for post with title", properties["title"], "is not correct!")
 		
 	return scheduled_posts

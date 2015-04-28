@@ -5,6 +5,7 @@ Written by /u/SmBe19
 
 import praw
 import time
+import re
 from getpass import getpass
 import threading
 import ScheduledPost
@@ -28,6 +29,10 @@ SLEEP_INBOX = 60
 
 # ### END USER CONFIGURATION ### #
 
+# ### BOT CONFIGURATION ### #
+DATE_RE = re.compile("\{\{date (.+?)\}\}")
+# ### END BOT CONFIGURATION ### #
+
 try:
 	# A file containing credentials used for testing. So my credentials don't get commited.
 	import bot
@@ -48,6 +53,8 @@ def check_inbox(r, reschedule):
 				print("reschedule")
 	Poster.lock.release()
 				
+def repl_date(matchobj):
+	return time.strftime(matchobj.group(1))
 
 class Poster (threading.Thread):
 	lock = threading.Lock()
@@ -73,7 +80,12 @@ class Poster (threading.Thread):
 					print("sleep submission for", sleep_time, "s")
 					if not self.reschedule.wait(sleep_time):
 						Poster.lock.acquire()
-						submission = self.sub.submit(nextPost.title, text=nextPost.text)
+						titleFormatted = nextPost.title
+						titleFormatted = DATE_RE.sub(repl_date, titleFormatted)
+						textFormatted = nextPost.text
+						textFormatted = DATE_RE.sub(repl_date, textFormatted)
+						submission = self.sub.submit(titleFormatted, textFormatted)
+						submission.set_flair(flair_text=nextPost.flair_text, flair_css_class=nextPost.flair_css)
 						if nextPost.distinguish:
 							submission.distinguish()
 						if nextPost.sticky:
