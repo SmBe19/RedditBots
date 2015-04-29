@@ -203,7 +203,6 @@ def run_bot():
 			break
 		except Exception as e:
 			print("Exception", e)
-			raise e
 			
 		write_config_done(done)
 		print("sleep for", SLEEP, "s")
