@@ -123,7 +123,6 @@ def run_bot():
 			break
 		except Exception as e:
 			print("Exception", e)
-			raise e
 		
 		print("sleep for", SLEEP, "s")
 		time.sleep(SLEEP)
