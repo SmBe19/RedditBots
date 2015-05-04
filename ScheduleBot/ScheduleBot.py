@@ -78,7 +78,9 @@ class Poster (threading.Thread):
 							sleep_time = p.get_time_until_next_post()
 							nextPost = p
 					print("sleep submission for", sleep_time, "s")
-					if not self.reschedule.wait(sleep_time):
+					if sleep_time == float("inf"):
+						self.reschedule.wait()
+					elif not self.reschedule.wait(sleep_time):
 						Poster.lock.acquire()
 						titleFormatted = nextPost.title
 						titleFormatted = DATE_RE.sub(repl_date, titleFormatted)
