@@ -27,6 +27,11 @@ def get_new_articles(source):
 			if title is None:
 				print("found no title, will use link")
 				title = link
+				
+			description = item.find("description")
+			
+			if description is not None:
+				description = description.text
 			
 			guid = item.find("guid")
 			
@@ -35,7 +40,7 @@ def get_new_articles(source):
 			if guid is None:
 				#print("found no guid, will use link")
 				guid = link
-			articles.append((title, link, guid))
+			articles.append((title, link, description, guid))
 		
 	except URLError as e:
 		print("Error:", e.reason)

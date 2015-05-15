@@ -28,6 +28,12 @@ SLEEP = 60*60
 # If True, the bot will submit a link even if reddit says it was already submitted. This can be the case if it was submitted in an other subreddit or by an other user, or if the bot failed with keeping track of already submitted articles (shouldn't be the case).
 RESUBMIT_ANYWAYS = True
 
+# If True, the bot will post a comment with the description of the article.
+POST_DESCRIPTION = True
+
+# The text the bot should post with the description, {0} will be replaced by the description
+DESCRIPTION_FORMAT = "Link description:\n\n{0}"
+
 # ### END USER CONFIGURATION ### #
 
 # ### BOT CONFIGURATION ### #
@@ -96,10 +102,12 @@ def run_bot():
 				newArticles.extend(RSSReader.get_new_articles(source))
 			
 			for article in newArticles:
-				if article[2] not in done:
-					done.append(article[2])
+				if article[3] not in done:
+					done.append(article[3])
 					try:
-						sub.submit(article[0], url=article[1], resubmit=RESUBMIT_ANYWAYS)
+						submission = sub.submit(article[0], url=article[1], resubmit=RESUBMIT_ANYWAYS)
+						if POST_DESCRIPTION and article[2] is not None:
+							submission.add_comment(DESCRIPTION_FORMAT.format(article[2]))
 					except praw.errors.AlreadySubmitted:
 						print("already submitted")
 					else:
