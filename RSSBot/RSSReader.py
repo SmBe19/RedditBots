@@ -1,5 +1,6 @@
 import urllib.request
 from urllib.error import URLError
+import html2text
 import xml.etree.ElementTree as ET
 #from time import strptime, mktime
 
@@ -31,7 +32,7 @@ def get_new_articles(source):
 			description = item.find("description")
 			
 			if description is not None:
-				description = description.text
+				description = html2text.html2text(description.text)
 			
 			guid = item.find("guid")
 			
