@@ -64,7 +64,11 @@ def write_config_done(done):
 				f.write(d + "\n")
 	
 def op_responded(post):
-	post.replace_more_comments()
+	try:
+		post.replace_more_comments()
+	except:
+		pass
+		
 	for comment in praw.helpers.flatten_tree(post.comments):
 		if comment.author == post.author:
 			return True
