@@ -30,6 +30,9 @@ REPORT_MESSAGE = "Potential Rule E violation, please check!"
 # The time in seconds, within OP has to respond
 RESPOND_QUEST_TIME = 3*60*60
 
+# The minimum number of comments a post should have before it is reported
+MIN_COMMENTS = 15
+
 # ### END USER CONFIGURATION ### #
 
 # ### BOT CONFIGURATION ### #
@@ -96,11 +99,12 @@ def run_bot():
 				if post.name in done:
 					continue
 				if time.time() - post.created_utc > RESPOND_QUEST_TIME:
-					if not op_responded(post):
-						post.report(REPORT_MESSAGE)
-						print("reported")
+					if len(post.comments) >= MIN_COMMENTS:
+						if not op_responded(post):
+							post.report(REPORT_MESSAGE)
+							print("reported")
 					
-					done.append(post.name)
+						done.append(post.name)
 			
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
