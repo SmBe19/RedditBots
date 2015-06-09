@@ -20,7 +20,7 @@ That's it! To refresh the token (it is only valid for one hour), use `o.refresh(
 If you want to have different tokens (e.g if your script has to log in with different users), you have to specify at least a different oauthtoken config file.
 
 ## Reddit Config
-In order to use OAuth2, you have to create an App on Reddit (https://www.reddit.com/prefs/apps/). For most use cases you will choose `script` as app type. You have to set the `redirect uri` to `http://127.0.0.1:65010/callback`, the other fields are up to you.
+In order to use OAuth2, you have to create an App on Reddit (https://www.reddit.com/prefs/apps/). For most use cases you will choose `script` as app type. You have to set the `redirect uri` to `http://127.0.0.1:65010/authorize_callback`, the other fields are up to you.
 
 ## Config
 OAuth2Util uses three config files to store the information. You can specify the name of them when you create the Util. Before you can use it, you have to fill out the first two, the third one will be filled out.
