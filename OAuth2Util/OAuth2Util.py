@@ -9,7 +9,7 @@ from threading import Thread
 REFRESH_MARGIN = 60
 REDIRECT_URL = "127.0.0.1"
 REDIRECT_PORT = 65010
-REDIRECT_PATH = "callback"
+REDIRECT_PATH = "authorize_callback"
 # ### END CONFIGURATION ### #
 
 class OAuth2UtilRequestHandler(BaseHTTPRequestHandler):
@@ -111,7 +111,7 @@ class OAuth2Util:
 		self.server.oauth2util = self
 		self.response_code = None
 		t = Thread(target=self.server.serve_forever)
-		t.deamon = True
+		t.daemon = True
 		t.start()
 	
 	def _wait_for_response(self):
@@ -121,8 +121,13 @@ class OAuth2Util:
 		self.server.shutdown()
 
 	def _get_new_access_information(self):
+		try:
+			url = self.r.get_authorize_url("SomeRandomState", self.scopes, self.refreshable)
+		except praw.errors.OAuthAppRequired:
+			print("Cannot obtain authorize url from praw. Please check your configuration files.")
+			raise
+
 		self._start_webserver()
-		url = self.r.get_authorize_url("SomeRandomState", self.scopes, self.refreshable)
 		webbrowser.open(url)
 		self._wait_for_response()
 		
