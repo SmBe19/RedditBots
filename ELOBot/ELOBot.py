@@ -5,16 +5,10 @@ Written by /u/SmBe19
 
 import praw
 import time
-from getpass import getpass
 import re
+import OAuth2Util
 
 # ### USER CONFIGURATION ### #
-
-# The bot's username.
-USERNAME = ""
-
-# The bot's password.
-PASSWORD = ""
 
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
@@ -66,8 +60,6 @@ DONE_CONFIGFILE = "done.txt"
 try:
 	# A file containing credentials used for testing. So my credentials don't get commited.
 	import bot
-	USERNAME = bot.username
-	PASSWORD = bot.password
 	USERAGENT = bot.useragent
 	SUBREDDIT = bot.subreddit
 except ImportError:
@@ -156,11 +148,9 @@ def set_new_elo(winner, loser, elo, sub):
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	try:
-		r.login(USERNAME, PASSWORD)
-	except praw.errors.InvalidUserPass:
-		print("Wrong password")
-		return
+	o = OAuth2Util.OAuth2Util(r)
+	o.refresh()
+	
 	sub = r.get_subreddit(SUBREDDIT)
 	
 	print("Start bot for subreddit", SUBREDDIT)
@@ -171,10 +161,11 @@ def run_bot():
 	
 	while True:
 		try:
+			o.refresh()
 			sub.refresh()
 			print("check comments")
 			for comment in sub.get_comments():
-				if comment.author.name == r.user.name:
+				if comment.author.name == r.get_me().name:
 					continue
 				match = BOTCALLRE.search(comment.body.lower())
 				if match:
@@ -229,13 +220,9 @@ def run_bot():
 	
 	
 if __name__ == "__main__":
-	if not USERNAME:
-		print("missing username")
-	elif not USERAGENT:
+	if not USERAGENT:
 		print("missing useragent")
 	elif not SUBREDDIT:
 		print("missing subreddit")
 	else:
-		if not PASSWORD:
-			PASSWORD = getpass()
 		run_bot()

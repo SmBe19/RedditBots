@@ -6,17 +6,11 @@ Written by /u/SmBe19
 import praw
 import time
 import re
-from getpass import getpass
 import threading
+import OAuth2Util
 import ScheduledPost
 
 # ### USER CONFIGURATION ### #
-
-# The bot's username.
-USERNAME = ""
-
-# The bot's password.
-PASSWORD = ""
 
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
@@ -34,10 +28,8 @@ DATE_RE = re.compile("\{\{date (.+?)\}\}")
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing credentials used for testing. So my credentials don't get commited.
+	# A file containing infos for testing.
 	import bot
-	USERNAME = bot.username
-	PASSWORD = bot.password
 	USERAGENT = bot.useragent
 	SUBREDDIT = bot.subreddit
 except ImportError:
@@ -59,8 +51,9 @@ def repl_date(matchobj):
 class Poster (threading.Thread):
 	lock = threading.Lock()
 	
-	def __init__(self, sub, reschedule, weredone):
+	def __init__(self, o, sub, reschedule, weredone):
 		threading.Thread.__init__(self)
+		self.o = o
 		self.sub = sub
 		self.reschedule = reschedule
 		self.weredone = weredone
@@ -71,6 +64,7 @@ class Poster (threading.Thread):
 			
 			while True:
 				try:
+					self.o.refresh()
 					sleep_time = float("inf")
 					nextPost = None
 					for p in scheduled_posts:
@@ -116,11 +110,8 @@ class Poster (threading.Thread):
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	try:
-		r.login(USERNAME, PASSWORD)
-	except praw.errors.InvalidUserPass:
-		print("Wrong password")
-		return
+	o = OAuth2Util.OAuth2Util(r)
+	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
 	
 	print("Start bot for subreddit", SUBREDDIT)
@@ -128,12 +119,13 @@ def run_bot():
 	reschedule = threading.Event()
 	weredone = threading.Event()
 	
-	thread = Poster(sub, reschedule, weredone)
+	thread = Poster(o, sub, reschedule, weredone)
 	thread.deamon = True
 	thread.start()
 	
 	while True:
 		try:
+			o.refresh()
 			check_inbox(r, reschedule)
 		
 			print("sleep inbox for", SLEEP_INBOX, "s")
@@ -153,13 +145,9 @@ def run_bot():
 	
 	
 if __name__ == "__main__":
-	if not USERNAME:
-		print("missing username")
-	elif not USERAGENT:
+	if not USERAGENT:
 		print("missing useragent")
 	elif not SUBREDDIT:
 		print("missing subreddit")
 	else:
-		if not PASSWORD:
-			PASSWORD = getpass()
 		run_bot()

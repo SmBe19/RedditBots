@@ -23,6 +23,14 @@ SLEEP = 60*60
 # ### BOT CONFIGURATION ### #
 DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
+
+try:
+	# A file containing infos for testing.
+	import bot
+	USERAGENT = bot.useragent
+	SUBREDDIT = bot.subreddit
+except ImportError:
+	pass
 	
 def read_config_done():
 	done = []
@@ -70,4 +78,9 @@ def run_bot():
 	
 	
 if __name__ == "__main__":
+	if not USERAGENT:
+		print("missing useragent")
+	elif not SUBREDDIT:
+		print("missing subreddit")
+	else:
 		run_bot()

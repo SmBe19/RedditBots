@@ -5,15 +5,9 @@ Written by /u/SmBe19
 
 import praw
 import time
-from getpass import getpass
+import OAuth2Util
 
 # ### USER CONFIGURATION ### #
-
-# The bot's username.
-USERNAME = ""
-
-# The bot's password.
-PASSWORD = ""
 
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
@@ -29,10 +23,8 @@ HEADERS_CONFIGFILE = "headers.txt"
 
 
 try:
-	# A file containing credentials used for testing. So my credentials don't get commited.
+	# A file containing infos for testing.
 	import bot
-	USERNAME = bot.username
-	PASSWORD = bot.password
 	USERAGENT = bot.useragent
 	SUBREDDIT = bot.subreddit
 except ImportError:
@@ -50,17 +42,15 @@ def read_headers_config():
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	try:
-		r.login(USERNAME, PASSWORD)
-	except praw.errors.InvalidUserPass:
-		print("Wrong password")
-		return
+	o = OAuth2Util.OAuth2Util(r)
+	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
 	
 	print("Start bot for subreddit", SUBREDDIT)
 	
 	while True:
 		try:
+			o.refresh()
 			headers = read_headers_config()
 			if len(headers) < 1:
 				return
@@ -88,13 +78,9 @@ def run_bot():
 	
 	
 if __name__ == "__main__":
-	if not USERNAME:
-		print("missing username")
-	elif not USERAGENT:
+	if not USERAGENT:
 		print("missing useragent")
 	elif not SUBREDDIT:
 		print("missing subreddit")
 	else:
-		if not PASSWORD:
-			PASSWORD = getpass()
 		run_bot()

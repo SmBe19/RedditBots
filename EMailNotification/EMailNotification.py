@@ -6,15 +6,9 @@ Written by /u/SmBe19
 import praw
 import time
 import smtplib
-from getpass import getpass
+import OAuth2Util
 
 # ### USER CONFIGURATION ### #
-
-# The bot's username.
-USERNAME = ""
-
-# The bot's password.
-PASSWORD = ""
 
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
@@ -65,10 +59,8 @@ RULES_CONFIGFILE = "rules.txt"
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing credentials used for testing. So my credentials don't get commited.
+	# A file containing infos for testing.
 	import bot
-	USERNAME = bot.username
-	PASSWORD = bot.password
 	USERAGENT = bot.useragent
 	SMTP_HOST = bot.smtp_host
 	SMTP_PORT = bot.smtp_port
@@ -120,7 +112,7 @@ def send_email(recipient, subject, message):
 			
 def send_message(r, recipient, subject, message):
 	if recipient.startswith("/u/"):
-		if not r.is_logged_in():
+		if not r.is_oauth_session():
 			print("Recipient is Reddit user, but you are not logged in. Rule ignored.")
 			return
 		r.send_message(r.get_redditor(recipient[3:]), subject, message)
@@ -130,14 +122,8 @@ def send_message(r, recipient, subject, message):
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	
-	if USERNAME and PASSWORD:
-		try:
-			r.login(USERNAME, PASSWORD)
-		except praw.errors.InvalidUserPass:
-			print("Wrong password")
-		else:
-			print("Logged in")
+	o = OAuth2Util.OAuth2Util(r)
+	o.refresh()
 	
 	print("Start bot")
 	
@@ -145,10 +131,11 @@ def run_bot():
 	
 	while True:
 		try:
+			o.refresh()
 			rules = read_config_rules()
 			for rule in rules:
 				print("process rule", rule[1])
-				if rule[0].startswith("/u/") and not r.is_logged_in():
+				if rule[0].startswith("/u/") and not r.is_oauth_session():
 					print("Recipient is Reddit user, but you are not logged in. Rule ignored.")
 					continue
 				if rule[1] == "votesintime":
