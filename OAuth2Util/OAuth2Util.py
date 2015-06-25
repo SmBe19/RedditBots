@@ -62,22 +62,16 @@ class OAuth2Util:
 	
 	def _read_app_info(self):
 		try:
-			lines = []
 			with open(self.OAUTHAPPINFO_CONFIGFILE, "r") as f:
-				for line in f:
-					if line.strip():
-						lines.append(line.strip())
+				lines = [x.strip() for x in f.readlines()]
 			self.r.set_oauth_app_info(lines[0], lines[1], "http://{0}:{1}/{2}".format(REDIRECT_URL, REDIRECT_PORT, REDIRECT_PATH))
 		except OSError:
 			print(self.OAUTHAPPINFO_CONFIGFILE, "not found.")
 			
 	def _read_config(self):
 		try:
-			lines = []
 			with open(self.OAUTHCONFIG_CONFIGFILE, "r") as f:
-				for line in f:
-					if line.strip():
-						lines.append(line.strip())
+				lines = [x.strip() for x in f.readlines()]
 			self.scopes = lines[0].split(",")
 			self.refreshable = lines[1] == "True"
 		except OSError:
@@ -85,11 +79,8 @@ class OAuth2Util:
 			
 	def _read_access_credentials(self):
 		try:
-			lines = []
 			with open(self.OAUTHTOKEN_CONFIGFILE, "r") as f:
-				for line in f:
-					if line.strip():
-						lines.append(line.strip())
+				lines = [x.strip() for x in f.readlines()]
 			self.token = lines[0]
 			self.refresh_token = lines[1]
 			self.r.set_access_credentials(set(self.scopes), self.token, self.refresh_token)
