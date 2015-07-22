@@ -1,7 +1,7 @@
 # Rename this file to oauth.txt
 
 # Config:
-scope=read,report
+scope=submit,read
 refreshable=True
 
 # App Info
