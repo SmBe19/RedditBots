@@ -1,0 +1,13 @@
+# Rename this file to oauth.txt
+
+# Config:
+scope=modcontributors,read
+refreshable=True
+
+# App Info
+app_key=thisistheid
+app_secret=ThisIsTheSecretDoNotShare
+
+# Token
+token=None
+refresh_token=None
