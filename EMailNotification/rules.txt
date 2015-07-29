@@ -1,4 +1,7 @@
 me@example.com	VotesInTime	askreddit	1500	5
-me@example.com	UserNewPost	b6d27f0x3
+me@example.com	UserNewPost	unidanx
 /u/user	SubNewPost	requestabot
-/u/user	UserInSubNewPost	Wr0ngThread	test
+/u/user	UserInSubNewPost	unidanx	test
+me@example.com	UserNewComment	unidanx
+/u/user	SubNewComment	requestabot
+/u/user	UserInSubNewComment	unidanx	requestabot

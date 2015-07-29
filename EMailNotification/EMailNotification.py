@@ -40,8 +40,17 @@ SUBJECT_SUBNEWPOST_TEXT = "New Post in {0}"
 # Subject line of the message for the UserNewPost rule. {0} will be replaced by the user name
 SUBJECT_USERNEWPOST_TEXT = "New Post from {0}"
 
-# Subject line of the message for the SubNewPost rule. {0} will be replaced by the Subreddit name, {1} by the user name
+# Subject line of the message for the UserInSubNewPost rule. {0} will be replaced by the Subreddit name, {1} by the user name
 SUBJECT_USERINSUBNEWPOST_TEXT = "New Post in {0} from {1}"
+
+# Subject line of the message for the SubNewComment rule. {0} will be replaced by the Subreddit name
+SUBJECT_SUBNEWCOMMENT_TEXT = "New Comment in {0}"
+
+# Subject line of the message for the UserNewComment rule. {0} will be replaced by the user name
+SUBJECT_USERNEWCOMMENT_TEXT = "New Comment from {0}"
+
+# Subject line of the message for the UserInSubNewComment rule. {0} will be replaced by the Subreddit name, {1} by the user name
+SUBJECT_USERINSUBNEWCOMMENT_TEXT = "New Comment in {0} from {1}"
 
 # Subject line of the message for the VotesInTime rule. {0} will be replaced by the Subreddit name
 SUBJECT_VOTESINTIME_TEXT = "New Post in {0} satisfying rule"
@@ -69,18 +78,20 @@ try:
 	SMTP_PASSWORD = bot.smtp_password
 except ImportError:
 	pass
-	
+
 def read_config_rules():
 	rules = []
 	try:
 		with open(RULES_CONFIGFILE, "r") as f:
 			for line in f:
+				if line.startswith("#"):
+					continue
 				rules.append([w.strip().lower() for w in line.split("\t")])
 	except OSError:
 		print(RULES_CONFIGFILE, "not found.")
 	return rules
-	
-	
+
+
 def read_config_done():
 	done = []
 	try:
@@ -91,25 +102,28 @@ def read_config_done():
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
 	return done
-	
+
 def write_config_done(done):
 	with open(DONE_CONFIGFILE, "w") as f:
 		for d in done:
 			if d:
 				f.write(d + "\n")
-				
+
 def send_email(recipient, subject, message):
 	smtp = smtplib.SMTP(host=SMTP_HOST, port=SMTP_PORT)
 	smtp.starttls()
 	if SMTP_USERNAME and SMTP_PASSWORD:
 		try:
 			smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
-		except SMTPAuthenticationError:
+		except smtplib.SMTPAuthenticationError:
 			print("Wrong email password")
-	
-	smtp.sendmail(SMTP_FROM, recipient, "Subject: {0}\n\n{1}".format(subject, message))
+
+	try:
+		smtp.sendmail(SMTP_FROM, recipient, "Subject: {0}\n\n{1}".format(subject, message))
+	except Exception as e:
+		print("Error while sending mail", e)
 	smtp.quit()
-			
+
 def send_message(r, recipient, subject, message):
 	if recipient.startswith("/u/"):
 		if not r.is_oauth_session():
@@ -118,21 +132,22 @@ def send_message(r, recipient, subject, message):
 		r.send_message(r.get_redditor(recipient[3:]), subject, message)
 	else:
 		send_email(recipient, subject, message)
-	
+
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
-	
+
 	print("Start bot")
-	
+
 	done = read_config_done()
-	
+
 	while True:
 		try:
 			o.refresh()
 			rules = read_config_rules()
+			old_done = done[:]
 			for rule in rules:
 				print("process rule", rule[1])
 				if rule[0].startswith("/u/") and not r.is_oauth_session():
@@ -142,62 +157,92 @@ def run_bot():
 					sub = r.get_subreddit(rule[2])
 					age = int(rule[3])
 					ups = int(rule[4])
-					
+
 					for post in sub.get_new(limit=100):
 						diff = abs((time.time() - post.created_utc) - age)
 						if diff <= AGE_BUFFER and post.score >= ups:
-							if post.name in done:
+							if post.name in old_done:
 								continue
 							if not BUILD_DONE_LIST:
 								send_message(r, rule[0], SUBJECT_VOTESINTIME_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 							done.append(post.name)
 							print("found new post for rule", rule[1])
-					
+
 				elif rule[1] == "usernewpost":
 					redditor = r.get_redditor(rule[2])
 					for post in redditor.get_submitted(limit=100):
-						if post.name in done:
+						if post.name in old_done:
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERNEWPOST_TEXT.format(redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
 						print("found new post for rule", rule[1])
-						
+
 				elif rule[1] == "subnewpost":
 					sub = r.get_subreddit(rule[2])
 					for post in sub.get_new(limit=100):
-						if post.name in done:
+						if post.name in old_done:
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_SUBNEWPOST_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
 						print("found new post for rule", rule[1])
-						
+
 				elif rule[1] == "userinsubnewpost":
 					redditor = r.get_redditor(rule[2])
 					for post in redditor.get_submitted(limit=100):
-						if post.subreddit.display_name.lower() != rule[3] or post.name in done:
+						if post.subreddit.display_name.lower() != rule[3] or post.name in old_done:
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERINSUBNEWPOST_TEXT.format(post.subreddit.display_name, redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
 						print("found new post for rule", rule[1])
-						
+
+				elif rule[1] == "usernewcomment":
+					redditor = r.get_redditor(rule[2])
+					for comment in redditor.get_comments(limit=100):
+						if comment.name in old_done:
+							continue
+						if not BUILD_DONE_LIST:
+							send_message(r, rule[0], SUBJECT_USERNEWCOMMENT_TEXT.format(redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
+						done.append(comment.name)
+						print("found new comment for rule", rule[1])
+
+				elif rule[1] == "subnewcomment":
+					sub = r.get_subreddit(rule[2])
+					for comment in sub.get_comments(limit=100):
+						if comment.name in old_done:
+							continue
+						if not BUILD_DONE_LIST:
+							send_message(r, rule[0], SUBJECT_SUBNEWCOMMENT_TEXT.format(sub.display_name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
+						done.append(comment.name)
+						print("found new comment for rule", rule[1])
+
+				elif rule[1] == "userinsubnewcomment":
+					redditor = r.get_redditor(rule[2])
+					for comment in redditor.get_comments(limit=100):
+						if comment.subreddit.display_name.lower() != rule[3] or comment.name in old_done:
+							continue
+						if not BUILD_DONE_LIST:
+							send_message(r, rule[0], SUBJECT_USERINSUBNEWCOMMENT_TEXT.format(comment.subreddit.display_name, redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
+						done.append(comment.name)
+						print("found new comment for rule", rule[1])
+
 				write_config_done(done)
-			
+
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
 			print("Exception", e)
-			
+
 		write_config_done(done)
 		print("sleep for", SLEEP, "s")
 		time.sleep(SLEEP)
-		
+
 	write_config_done(done)
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")
