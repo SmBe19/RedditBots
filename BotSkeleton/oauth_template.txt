@@ -1,13 +1,18 @@
-# Rename this file to oauth.txt
+# Rename this file to oauth.ini
 
-# Config:
+[app]
 scope=identity,submit,read
 refreshable=True
-
-# App Info
 app_key=thisistheid
 app_secret=ThisIsTheSecretDoNotShare
 
-# Token
+[server]
+server_mode=False
+url=127.0.0.1
+port=65010
+redirect_path=authorize_callback
+link_path=oauth
+
+[token]
 token=None
 refresh_token=None
