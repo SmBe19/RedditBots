@@ -11,7 +11,7 @@ There are four variables you should define:
 
  * **First**: The date and time you want the post to be submitted for the first time. The format is `dd.mm.yyyy hh:mm`. If you like you can also specify your timezone eg. as `+0200` (difference to UTC). For example: `First: 24.04.2015 22:10` or `First: 24.04.2015 22:10 +0800`
  * **repeat**: How long the timespan is between two posts. Specify a number and a unit of time(seconds, minutes, hours, days, weeks, months, years). If repeat is not specified or there is no unit of time, the post will only posted once. E.g. `repeat: 2 hours`. Note: 1 months = 30 days, 1 years = 365 days.
- * **title**: The title the post.
+ * **title**: The title of the post.
  * **text**: The text of the post. If you would like to specify a multi line comment, write on the first line `text: |` and then write the text on the following lines, one level more indented than the rest of the variables. If you submit a link, the  text will be posted as a top level comment.
  * **link**: The link to submit. If not specified, a self post will be made.
 
