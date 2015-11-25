@@ -68,7 +68,7 @@ class ScheduledPost:
 			return 0
 		if self.repeat < 0:
 			return -1
-		return int(diff // self.repeat)
+		return int(diff // self.repeat) + 1
 
 	def get_next_post_time(self):
 		return time.time() + self.get_time_until_next_post()

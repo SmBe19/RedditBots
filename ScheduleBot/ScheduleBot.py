@@ -78,7 +78,7 @@ class Poster (threading.Thread):
 						if p.get_time_until_next_post() < sleep_time:
 							sleep_time = p.get_time_until_next_post()
 							nextPost = p
-					nextPostNumber = p.get_next_post_number()
+					nextPostNumber = nextPost.get_next_post_number()
 					assert nextPostNumber >= 0 or sleep_time == float("inf")
 					print("sleep submission for", sleep_time, "s (", time.strftime("%d.%m.%Y %H:%M", time.localtime(nextPost.get_next_post_time())), ")")
 
@@ -161,6 +161,8 @@ def run_bot():
 			print("Exception", e)
 			import traceback
 			traceback.print_exc()
+			Poster.lock.acquire(False)
+			Poster.lock.release()
 
 	weredone.set()
 	reschedule.set()
