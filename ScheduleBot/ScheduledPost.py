@@ -7,7 +7,8 @@ CONFIG_WIKIPAGE = "schedulebot-config"
 # ### END BOT CONFIGURATION ### #
 
 class ScheduledPost:
-	def __init__(self, first, title="Scheduled Post", text=None, link=None, repeat="-1", times="-1", flair_text="", flair_css="", distinguish="False", sticky="False", contest_mode="False"):
+	def __init__(self, sub, first, title="Scheduled Post", text=None, link=None, repeat="-1", times="-1", flair_text="", flair_css="", distinguish="False", sticky="False", contest_mode="False"):
+		self.sub = sub
 		self.first = first
 		self.title = title
 		self.text = text
@@ -70,7 +71,7 @@ class ScheduledPost:
 		return int(diff // self.repeat)
 
 	def get_next_post_time(self):
-		return time.time() + get_time_until_next_post(self)
+		return time.time() + self.get_time_until_next_post()
 
 def repl_indentation(matchobj):
 	return "\r" * matchobj.group(0).count(matchobj.group(1))
@@ -104,7 +105,7 @@ def read_config(sub):
 				properties[key] = properties[key][2:]
 			# print(key, ":", properties[key])
 		try:
-			scheduled_posts.append(ScheduledPost(**properties))
+			scheduled_posts.append(ScheduledPost(sub, **properties))
 		except TypeError:
 			print("Rule for post with title", properties["title"], "is not correct!")
 

@@ -15,8 +15,8 @@ import ScheduledPost
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
 
-# The name of the subreddit to post to. e.g. "funny"
-SUBREDDIT = ""
+# The name of the subreddits to post to. e.g. "funny"
+SUBREDDITS = ["", ""]
 
 # The time in seconds the bot should sleep until it checks the inbox again.
 SLEEP_INBOX = 60
@@ -31,7 +31,7 @@ try:
 	# A file containing infos for testing.
 	import bot
 	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	SUBREDDITS = bot.subreddits
 except ImportError:
 	pass
 
@@ -51,17 +51,19 @@ def repl_date(matchobj):
 class Poster (threading.Thread):
 	lock = threading.Lock()
 
-	def __init__(self, o, sub, reschedule, weredone):
+	def __init__(self, o, subs, reschedule, weredone):
 		threading.Thread.__init__(self)
 		self.o = o
-		self.sub = sub
+		self.subs = subs
 		self.reschedule = reschedule
 		self.weredone = weredone
 
 	def run(self):
 		while True:
 			Poster.lock.acquire()
-			scheduled_posts = ScheduledPost.read_config(self.sub)
+			scheduled_posts = []
+			for sub in self.subs:
+				scheduled_posts.extend(ScheduledPost.read_config(sub))
 			Poster.lock.release()
 
 			while True:
@@ -78,7 +80,8 @@ class Poster (threading.Thread):
 							nextPost = p
 					nextPostNumber = p.get_next_post_number()
 					assert nextPostNumber >= 0 or sleep_time == float("inf")
-					print("sleep submission for", sleep_time, "s")
+					print("sleep submission for", sleep_time, "s (", time.strftime("%d.%m.%Y %H:%M", time.localtime(nextPost.get_next_post_time())), ")")
+
 					if sleep_time == float("inf"):
 						self.reschedule.wait()
 					elif not self.reschedule.wait(sleep_time):
@@ -92,13 +95,13 @@ class Poster (threading.Thread):
 						if nextPost.link is not None:
 							links = nextPost.link.split("\n")
 							link = links[nextPostNumber % len(links)]
-							submission = self.sub.submit(titleFormatted, url=link, resubmit=True)
+							submission = nextPost.sub.submit(titleFormatted, url=link, resubmit=True)
 							if textFormatted is not None and len(textFormatted) > 0:
 								submission.add_comment(textFormatted)
 						else:
 							if textFormatted is None:
 								textFormatted = "..."
-							submission = self.sub.submit(titleFormatted, textFormatted)
+							submission = nextPost.sub.submit(titleFormatted, textFormatted)
 						submission.set_flair(flair_text=nextPost.flair_text, flair_css_class=nextPost.flair_css)
 						if nextPost.distinguish:
 							submission.distinguish()
@@ -132,14 +135,14 @@ def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
-	sub = r.get_subreddit(SUBREDDIT)
+	subs = [r.get_subreddit(x) for x in SUBREDDITS]
 
-	print("Start bot for subreddit", SUBREDDIT)
+	print("Start bot for subreddits", SUBREDDITS)
 
 	reschedule = threading.Event()
 	weredone = threading.Event()
 
-	thread = Poster(o, sub, reschedule, weredone)
+	thread = Poster(o, subs, reschedule, weredone)
 	thread.deamon = True
 	thread.start()
 
@@ -167,7 +170,7 @@ def run_bot():
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")
-	elif not SUBREDDIT:
-		print("missing subreddit")
+	elif not SUBREDDITS:
+		print("missing subreddits")
 	else:
 		run_bot()
