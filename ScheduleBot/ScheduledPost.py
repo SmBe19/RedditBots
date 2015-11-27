@@ -57,7 +57,7 @@ class ScheduledPost:
 		if self.repeat < 0:
 			return float("inf")
 		if self.times > 0:
-			if diff // self.repeat >= self.times + 1:
+			if diff // self.repeat >= self.times - 1:
 				return float("inf")
 		used = diff % self.repeat
 		return self.repeat - used
