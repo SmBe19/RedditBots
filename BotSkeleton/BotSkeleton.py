@@ -7,6 +7,8 @@ Written by /u/SmBe19
 
 import praw
 import time
+import logging
+import logging.handlers
 import OAuth2Util
 
 # ### USER CONFIGURATION ### #
@@ -26,6 +28,14 @@ SLEEP = 60*60
 DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -34,7 +44,23 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
 
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
+
+# ### DONE CONFIG FILE ### #
 def read_config_done():
 	done = []
 	try:
@@ -43,7 +69,7 @@ def read_config_done():
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		print(DONE_CONFIGFILE, "not found.")
+		log.error("%s not found.", DONE_CONFIGFILE)
 	return done
 
 def write_config_done(done):
@@ -51,15 +77,16 @@ def write_config_done(done):
 		for d in done:
 			if d:
 				f.write(d + "\n")
+# ### END DONE CONFIG FILE ### #
 
-# main procedure
+# ### MAIN PROCEDURE ### #
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
 
-	print("Start bot for subreddit", SUBREDDIT)
+	log.info("Start bot for subreddit %s", SUBREDDIT)
 
 	done = read_config_done()
 
@@ -71,19 +98,21 @@ def run_bot():
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e)
 
 		write_config_done(done)
-		print("sleep for", SLEEP, "s")
+		log.info("sleep for %s s", SLEEP)
 		time.sleep(SLEEP)
 
 	write_config_done(done)
+# ### END MAIN PROCEDURE ### #
 
-
+# ### START BOT ### #
 if __name__ == "__main__":
 	if not USERAGENT:
-		print("missing useragent")
+		log.error("missing useragent")
 	elif not SUBREDDIT:
-		print("missing subreddit")
+		log.error("missing subreddit")
 	else:
 		run_bot()
+# ### END START BOT ### #
