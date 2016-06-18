@@ -68,14 +68,11 @@ RULES_CONFIGFILE = "rules.txt"
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SMTP_HOST = bot.smtp_host
-	SMTP_PORT = bot.smtp_port
-	SMTP_FROM = bot.smtp_from
-	SMTP_USERNAME = bot.smtp_username
-	SMTP_PASSWORD = bot.smtp_password
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
 

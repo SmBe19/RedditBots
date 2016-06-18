@@ -26,10 +26,11 @@ ONLY_TEST = False
 # ### END USER CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
 
@@ -38,12 +39,12 @@ def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
-	
+
 	sub = r.get_subreddit(SUBREDDIT)
-	
+
 	print("Start bot for subreddit", SUBREDDIT)
 	print("Will replace flair \"{0}\" with \"{1}\"".format(OLD_FLAIR_TEXT, NEW_FLAIR_TEXT))
-	
+
 	try:
 		last_element = None
 		posts = sub.get_new(limit=100)
@@ -54,29 +55,29 @@ def run_bot():
 			active_page += 1
 			print("Search Page", active_page)
 			found_new_post = False
-			
+
 			for post in posts:
 				found_new_post = True
-				
+
 				if (post.link_flair_css_class == OLD_FLAIR_CSS or not OLD_FLAIR_CSS) and (post.link_flair_text == OLD_FLAIR_TEXT or not OLD_FLAIR_TEXT):
 					if ONLY_TEST:
 						print ("would change flair")
 					else:
 						print("change flair")
 						post.set_flair(NEW_FLAIR_TEXT, NEW_FLAIR_CSS)
-						
+
 					changed += 1
 				last_element = post.name
 			posts = sub.get_new(limit=100, params={"after" : last_element})
-			
+
 		print("changed", changed, "posts")
-		
+
 	except KeyboardInterrupt:
 		pass
 	except Exception as e:
 		print("Exception", e)
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")

@@ -28,13 +28,14 @@ DATE_RE = re.compile("\{\{date (.+?)\}\}")
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
-	
+
 def check_inbox(r, reschedule):
 	Poster.lock.acquire()
 	for mail in r.get_unread():
@@ -44,24 +45,24 @@ def check_inbox(r, reschedule):
 				reschedule.set()
 				print("reschedule")
 	Poster.lock.release()
-				
+
 def repl_date(matchobj):
 	return time.strftime(matchobj.group(1))
 
 class Poster (threading.Thread):
 	lock = threading.Lock()
-	
+
 	def __init__(self, o, sub, reschedule, weredone):
 		threading.Thread.__init__(self)
 		self.o = o
 		self.sub = sub
 		self.reschedule = reschedule
 		self.weredone = weredone
-	
+
 	def run(self):
 		while True:
 			scheduled_posts = ScheduledPost.read_config(self.sub)
-			
+
 			while True:
 				try:
 					self.o.refresh()
@@ -90,11 +91,11 @@ class Poster (threading.Thread):
 							submission.set_contest_mode(nextPost.contest_mode)
 						print("submitted")
 						Poster.lock.release()
-					
+
 					if self.reschedule.is_set():
 						self.reschedule.clear()
 						break
-						
+
 				# Allows the bot to exit on ^C, all other exceptions are ignored
 				except KeyboardInterrupt:
 					print("We're almost done")
@@ -103,31 +104,31 @@ class Poster (threading.Thread):
 					print("Exception", e)
 					import traceback
 					traceback.print_exc()
-			
+
 			if self.weredone.is_set():
 				break
-	
+
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
-	
+
 	print("Start bot for subreddit", SUBREDDIT)
-	
+
 	reschedule = threading.Event()
 	weredone = threading.Event()
-	
+
 	thread = Poster(o, sub, reschedule, weredone)
 	thread.deamon = True
 	thread.start()
-	
+
 	while True:
 		try:
 			o.refresh()
 			check_inbox(r, reschedule)
-		
+
 			print("sleep inbox for", SLEEP_INBOX, "s")
 			time.sleep(SLEEP_INBOX)
 		# Allows the bot to exit on ^C, all other exceptions are ignored
@@ -138,12 +139,12 @@ def run_bot():
 			print("Exception", e)
 			import traceback
 			traceback.print_exc()
-		
+
 	weredone.set()
 	reschedule.set()
 	print("We're done")
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")

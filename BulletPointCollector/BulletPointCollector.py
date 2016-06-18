@@ -26,25 +26,27 @@ LIST_LINESTART_RE = re.compile(r"^( *)([-+*])( +)")
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
-	
+
 def collect_points(url):
 	r = praw.Reddit(USERAGENT)
-	
+
 	thread = r.get_submission(url=url)
-	
+
 	if thread is None:
 		print("Thread not found")
 		return
-	
+
 	comments = praw.helpers.flatten_tree(thread.comments)
-	
+
 	result = []
-	
+
 	for comment in comments:
 		isInList = False
 		wasEmpty = True
@@ -54,11 +56,11 @@ def collect_points(url):
 			wasEmpty = line == ""
 			if not wasEmpty and isInList:
 				result.append(LIST_LINESTART_RE.sub(r"\1* ", line))
-				
+
 	with open(LIST_OUTPUTFILE, "w") as f:
 		f.write("\n".join(result))
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")

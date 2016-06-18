@@ -34,13 +34,14 @@ DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
-	
+
 def read_config_done():
 	done = []
 	try:
@@ -51,40 +52,40 @@ def read_config_done():
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
 	return done
-	
+
 def write_config_done(done):
 	with open(DONE_CONFIGFILE, "w") as f:
 		for d in done:
 			if d:
 				f.write(d + "\n")
-	
+
 def op_responded(post):
 	try:
 		post.replace_more_comments()
 	except:
 		pass
-		
+
 	for comment in praw.helpers.flatten_tree(post.comments):
 		if comment.author == post.author:
 			return True
 	return False
-	
+
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
-	
+
 	print("Start bot for subreddit", SUBREDDIT)
-	
+
 	done = read_config_done()
-	
+
 	while True:
 		try:
 			print("check subreddit")
 			o.refresh()
-			
+
 			for post in sub.get_new(limit=100):
 				if post.name in done:
 					continue
@@ -93,22 +94,22 @@ def run_bot():
 						if not op_responded(post):
 							post.report(REPORT_MESSAGE)
 							print("reported")
-					
+
 						done.append(post.name)
-			
+
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
 			print("Exception", e)
-			
+
 		write_config_done(done)
 		print("sleep for", SLEEP, "s")
 		time.sleep(SLEEP)
-		
+
 	write_config_done(done)
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")

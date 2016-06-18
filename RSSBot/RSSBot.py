@@ -36,13 +36,14 @@ DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing infos for testing.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
-	
+
 def read_config_sources():
 	sources = []
 	try:
@@ -63,34 +64,34 @@ def read_config_done():
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
 	return done
-	
+
 def write_config_done(done):
 	with open(DONE_CONFIGFILE, "w") as f:
 		for d in done:
 			if d:
 				f.write(d + "\n")
-	
+
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
-	
+
 	print("Start bot for subreddit", SUBREDDIT)
-	
+
 	done = read_config_done()
-	
+
 	while True:
 		try:
 			o.refresh()
 			sources = read_config_sources()
-			
+
 			print("check sources")
 			newArticles = []
 			for source in sources:
 				newArticles.extend(RSSReader.get_new_articles(source))
-			
+
 			for article in newArticles:
 				if article[3] not in done:
 					done.append(article[3])
@@ -102,20 +103,20 @@ def run_bot():
 						print("already submitted")
 					else:
 						print("submit article")
-			
+
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
 			print("Exception", e)
-			
+
 		write_config_done(done)
 		print("sleep for", SLEEP, "s")
 		time.sleep(SLEEP)
-		
+
 	write_config_done(done)
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")

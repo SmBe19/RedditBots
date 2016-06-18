@@ -58,15 +58,16 @@ DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
 try:
-	# A file containing credentials used for testing. So my credentials don't get commited.
+	# A file containing data for global constants.
 	import bot
-	USERAGENT = bot.useragent
-	SUBREDDIT = bot.subreddit
+	for k in dir(bot):
+		if k.upper() in globals():
+			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
-	
+
 BOTCALLRE = re.compile(re.escape(BOTCALLSTRING.lower()) + " (" + "|".join([re.escape(a.lower()) for a in BOTACTIONS]) + ")(?: (?:\/u\/)?(\S*) (?:\/u\/)?(\S*))?")
-	
+
 def read_config_elo():
 	elo = {}
 	try:
@@ -77,7 +78,7 @@ def read_config_elo():
 	except OSError:
 		print(ELO_CONFIGFILE, "not found.")
 	return elo
-	
+
 def write_config_elo(elo):
 	with open(ELO_CONFIGFILE, "w") as f:
 		for key in elo:
@@ -93,12 +94,12 @@ def read_config_progress():
 	except OSError:
 		print(PROGRESS_CONFIGFILE, "not found.")
 	return progress
-	
+
 def write_config_progress(progress):
 	with open(PROGRESS_CONFIGFILE, "w") as f:
 		for key in progress:
 			f.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(key, progress[key][0][0], str(progress[key][0][1]), progress[key][1][0], str(progress[key][1][1])))
-				
+
 def read_config_done():
 	done = []
 	try:
@@ -109,18 +110,18 @@ def read_config_done():
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
 	return done
-	
+
 def write_config_done(done):
 	with open(DONE_CONFIGFILE, "w") as f:
 		for d in done:
 			if d:
 				f.write(d + "\n")
-				
+
 def write_all_config(elo, progress, done):
 	write_config_done(done)
 	write_config_elo(elo)
 	write_config_progress(progress)
-				
+
 def get_new_elo(winner_elo, loser_elo):
 	diff = (loser_elo - winner_elo)
 	if abs(diff) > ELO_MAX_DIFFERENCE:
@@ -130,7 +131,7 @@ def get_new_elo(winner_elo, loser_elo):
 	new_winner_elo = winner_elo + ELO_MAX_ADJUSTMENT * (1 - e_a)
 	new_loser_elo = loser_elo + ELO_MAX_ADJUSTMENT * (0 - e_b)
 	return (int(new_winner_elo), int(new_loser_elo))
-				
+
 def set_new_elo(winner, loser, elo, sub):
 	if winner == loser:
 		return
@@ -144,21 +145,21 @@ def set_new_elo(winner, loser, elo, sub):
 		sub.set_flair(loser, FLAIR_TEXT.format(str(elo[loser])))
 	except praw.errors.ModeratorRequired:
 		print("You have to be mod to set flair")
-	
+
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
-	
+
 	sub = r.get_subreddit(SUBREDDIT)
-	
+
 	print("Start bot for subreddit", SUBREDDIT)
-	
+
 	done = read_config_done()
 	elo = read_config_elo()
 	progress = read_config_progress()
-	
+
 	while True:
 		try:
 			o.refresh()
@@ -178,14 +179,14 @@ def run_bot():
 								done.append(comment.name)
 								print("Same user!")
 								continue
-								
+
 							progress[comment.name] = [[match.group(2).lower(), match.group(2).lower() == comment.author.name.lower()], [match.group(3).lower(), match.group(3).lower() == comment.author.name.lower()]]
-							
+
 							for i in range(2):
 								if not progress[comment.name][i][1]:
 									comment.reply(PLEASE_CONFIRM_TEXT.format(progress[comment.name][i][0]) + BOT_SIGNATURE)
 									print(progress[comment.name][i][0], "has to confirm")
-					
+
 					# confirmation
 					if match.group(1).lower() == BOTACTIONS[1]:
 						if comment.parent_id in progress:
@@ -193,7 +194,7 @@ def run_bot():
 								if comment.author.name.lower() == progress[comment.parent_id][i][0]:
 									progress[comment.parent_id][i][1] = True
 									print("found confirmation for", comment.author.name)
-							
+
 							if progress[comment.parent_id][0][1] and progress[comment.parent_id][1][1]:
 								set_new_elo(progress[comment.parent_id][0][0], progress[comment.parent_id][1][0], elo, sub)
 								conf = CONFIRMATION_TEXT.format(progress[comment.parent_id][0][0], elo[progress[comment.parent_id][0][0]], progress[comment.parent_id][1][0], elo[progress[comment.parent_id][1][0]])
@@ -201,24 +202,24 @@ def run_bot():
 								del progress[comment.parent_id]
 								parent = r.get_info(thing_id=comment.parent_id)
 								parent.reply(conf + BOT_SIGNATURE)
-								
+
 								print("updated elo")
 
 								write_all_config(elo, progress, done)
-			
+
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
 			print("Exception", e)
-			
+
 		write_all_config(elo, progress, done)
 		print("sleep for", SLEEP, "s")
 		time.sleep(SLEEP)
-		
+
 	write_all_config(elo, progress, done)
-	
-	
+
+
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")
