@@ -5,6 +5,8 @@ Written by /u/SmBe19
 
 import praw
 import time
+import logging
+import logging.handlers
 import re
 import OAuth2Util
 
@@ -57,6 +59,14 @@ PROGRESS_CONFIGFILE = "progress.txt"
 DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -65,6 +75,21 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
+
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
 
 BOTCALLRE = re.compile(re.escape(BOTCALLSTRING.lower()) + " (" + "|".join([re.escape(a.lower()) for a in BOTACTIONS]) + ")(?: (?:\/u\/)?(\S*) (?:\/u\/)?(\S*))?")
 
@@ -76,7 +101,7 @@ def read_config_elo():
 				parts = line.split("\t")
 				elo[parts[0].strip()] = int(parts[1])
 	except OSError:
-		print(ELO_CONFIGFILE, "not found.")
+		log.info("%s not found.", ELO_CONFIGFILE)
 	return elo
 
 def write_config_elo(elo):
@@ -92,7 +117,7 @@ def read_config_progress():
 				parts = line.strip().split("\t")
 				progress[parts[0]] = [[parts[1], parts[2].lower() == "true"], [parts[3], parts[4].lower() == "true"]]
 	except OSError:
-		print(PROGRESS_CONFIGFILE, "not found.")
+		log.info("%s not found.", PROGRESS_CONFIGFILE)
 	return progress
 
 def write_config_progress(progress):
@@ -108,7 +133,7 @@ def read_config_done():
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		print(DONE_CONFIGFILE, "not found.")
+		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
 
 def write_config_done(done):
@@ -144,7 +169,7 @@ def set_new_elo(winner, loser, elo, sub):
 		sub.set_flair(winner, FLAIR_TEXT.format(str(elo[winner])))
 		sub.set_flair(loser, FLAIR_TEXT.format(str(elo[loser])))
 	except praw.errors.ModeratorRequired:
-		print("You have to be mod to set flair")
+		log.warning("You have to be mod to set flair")
 
 # main procedure
 def run_bot():
@@ -154,7 +179,7 @@ def run_bot():
 
 	sub = r.get_subreddit(SUBREDDIT)
 
-	print("Start bot for subreddit", SUBREDDIT)
+	log.info("Start bot for subreddit %s", SUBREDDIT)
 
 	done = read_config_done()
 	elo = read_config_elo()
@@ -164,7 +189,7 @@ def run_bot():
 		try:
 			o.refresh()
 			sub.refresh()
-			print("check comments")
+			log.info("check comments")
 			for comment in sub.get_comments():
 				if comment.author.name == r.get_me().name:
 					continue
@@ -173,11 +198,11 @@ def run_bot():
 					# game finished
 					if match.group(1).lower() == BOTACTIONS[0]:
 						if comment.name not in progress and comment.name not in done:
-							print("register new game:", match.group(0))
+							log.info("register new game: %s", match.group(0))
 							if match.group(2).lower() == match.group(3).lower():
 								comment.reply(BOT_ERROR_SAME_USER + BOT_SIGNATURE)
 								done.append(comment.name)
-								print("Same user!")
+								log.info("Same user!")
 								continue
 
 							progress[comment.name] = [[match.group(2).lower(), match.group(2).lower() == comment.author.name.lower()], [match.group(3).lower(), match.group(3).lower() == comment.author.name.lower()]]
@@ -185,7 +210,7 @@ def run_bot():
 							for i in range(2):
 								if not progress[comment.name][i][1]:
 									comment.reply(PLEASE_CONFIRM_TEXT.format(progress[comment.name][i][0]) + BOT_SIGNATURE)
-									print(progress[comment.name][i][0], "has to confirm")
+									log.info("%s has to confirm", progress[comment.name][i][0])
 
 					# confirmation
 					if match.group(1).lower() == BOTACTIONS[1]:
@@ -193,7 +218,7 @@ def run_bot():
 							for i in range(2):
 								if comment.author.name.lower() == progress[comment.parent_id][i][0]:
 									progress[comment.parent_id][i][1] = True
-									print("found confirmation for", comment.author.name)
+									log.info("found confirmation for %s", comment.author.name)
 
 							if progress[comment.parent_id][0][1] and progress[comment.parent_id][1][1]:
 								set_new_elo(progress[comment.parent_id][0][0], progress[comment.parent_id][1][0], elo, sub)
@@ -203,7 +228,7 @@ def run_bot():
 								parent = r.get_info(thing_id=comment.parent_id)
 								parent.reply(conf + BOT_SIGNATURE)
 
-								print("updated elo")
+								log.info("updated elo")
 
 								write_all_config(elo, progress, done)
 
@@ -211,10 +236,10 @@ def run_bot():
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e, exc_info=True)
 
 		write_all_config(elo, progress, done)
-		print("sleep for", SLEEP, "s")
+		log.info("sleep for %s s", SLEEP)
 		time.sleep(SLEEP)
 
 	write_all_config(elo, progress, done)
@@ -222,8 +247,8 @@ def run_bot():
 
 if __name__ == "__main__":
 	if not USERAGENT:
-		print("missing useragent")
+		log.error("missing useragent")
 	elif not SUBREDDIT:
-		print("missing subreddit")
+		log.error("missing subreddit")
 	else:
 		run_bot()

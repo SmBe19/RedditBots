@@ -5,6 +5,8 @@ Written by /u/SmBe19
 
 import praw
 import time
+import logging
+import logging.handlers
 import OAuth2Util
 import RSSReader
 
@@ -35,6 +37,14 @@ SOURCES_CONFIGFILE = "sources.txt"
 DONE_CONFIGFILE = "done.txt"
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -43,6 +53,21 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
+
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
 
 def read_config_sources():
 	sources = []
@@ -51,7 +76,7 @@ def read_config_sources():
 			for line in f:
 				sources.append(line)
 	except OSError:
-		print(SOURCES_CONFIGFILE, "not found.")
+		log.error("%s not found.", SOURCES_CONFIGFILE)
 	return sources
 
 def read_config_done():
@@ -62,7 +87,7 @@ def read_config_done():
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		print(DONE_CONFIGFILE, "not found.")
+		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
 
 def write_config_done(done):
@@ -78,7 +103,7 @@ def run_bot():
 	o.refresh()
 	sub = r.get_subreddit(SUBREDDIT)
 
-	print("Start bot for subreddit", SUBREDDIT)
+	log.info("Start bot for subreddit %s", SUBREDDIT)
 
 	done = read_config_done()
 
@@ -87,7 +112,7 @@ def run_bot():
 			o.refresh()
 			sources = read_config_sources()
 
-			print("check sources")
+			log.info("check sources")
 			newArticles = []
 			for source in sources:
 				newArticles.extend(RSSReader.get_new_articles(source))
@@ -100,18 +125,18 @@ def run_bot():
 						if POST_DESCRIPTION and article[2] is not None:
 							submission.add_comment(DESCRIPTION_FORMAT.format(article[2]))
 					except praw.errors.AlreadySubmitted:
-						print("already submitted")
+						log.info("already submitted")
 					else:
-						print("submit article")
+						log.info("submit article")
 
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e, exc_info=True)
 
 		write_config_done(done)
-		print("sleep for", SLEEP, "s")
+		log.info("sleep for %s s", SLEEP)
 		time.sleep(SLEEP)
 
 	write_config_done(done)
@@ -119,8 +144,8 @@ def run_bot():
 
 if __name__ == "__main__":
 	if not USERAGENT:
-		print("missing useragent")
+		log.error("missing useragent")
 	elif not SUBREDDIT:
-		print("missing subreddit")
+		log.error("missing subreddit")
 	else:
 		run_bot()

@@ -5,6 +5,8 @@ Written by /u/SmBe19
 
 import praw
 import time
+import logging
+import logging.handlers
 import re
 import threading
 import OAuth2Util
@@ -27,6 +29,14 @@ SLEEP_INBOX = 60
 DATE_RE = re.compile("\{\{date (.+?)\}\}")
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -35,6 +45,21 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
+
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
 
 def check_inbox(r, reschedule):
 	Poster.lock.acquire()
@@ -43,7 +68,7 @@ def check_inbox(r, reschedule):
 			if mail.body.strip().lower() == "schedule":
 				mail.mark_as_read()
 				reschedule.set()
-				print("reschedule")
+				log.info("reschedule")
 	Poster.lock.release()
 
 def repl_date(matchobj):
@@ -81,7 +106,7 @@ class Poster (threading.Thread):
 							nextPost = p
 					nextPostNumber = nextPost.get_next_post_number()
 					assert nextPostNumber >= 0 or sleep_time == float("inf")
-					print("sleep submission for", sleep_time, "s (", time.strftime("%d.%m.%Y %H:%M", time.localtime(nextPost.get_next_post_time())), ")")
+					log.info("sleep submission for %s s(%s)", sleep_time, time.strftime("%d.%m.%Y %H:%M", time.localtime(nextPost.get_next_post_time())))
 
 					if sleep_time == float("inf"):
 						self.reschedule.wait()
@@ -110,7 +135,7 @@ class Poster (threading.Thread):
 							submission.sticky()
 						if nextPost.contest_mode:
 							submission.set_contest_mode(nextPost.contest_mode)
-						print("submitted")
+						log.info("submitted")
 						Poster.lock.release()
 
 					if self.reschedule.is_set():
@@ -119,10 +144,10 @@ class Poster (threading.Thread):
 
 				# Allows the bot to exit on ^C, all other exceptions are ignored
 				except KeyboardInterrupt:
-					print("We're almost done")
+					log.info("We're almost done")
 					break
 				except Exception as e:
-					print("Exception", e)
+					log.error("Exception %s", e, exc_info=True)
 					import traceback
 					traceback.print_exc()
 					Poster.lock.acquire(False)
@@ -138,7 +163,7 @@ def run_bot():
 	o.refresh()
 	subs = [r.get_subreddit(x) for x in SUBREDDITS]
 
-	print("Start bot for subreddits", SUBREDDITS)
+	log.info("Start bot for subreddits %s", SUBREDDITS)
 
 	reschedule = threading.Event()
 	weredone = threading.Event()
@@ -152,14 +177,14 @@ def run_bot():
 			o.refresh()
 			check_inbox(r, reschedule)
 
-			print("sleep inbox for", SLEEP_INBOX, "s")
+			log.info("sleep inbox for %s s", SLEEP_INBOX)
 			time.sleep(SLEEP_INBOX)
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
-			print("We're almost done")
+			log.info("We're almost done")
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e, exc_info=True)
 			import traceback
 			traceback.print_exc()
 			Poster.lock.acquire(False)
@@ -167,13 +192,13 @@ def run_bot():
 
 	weredone.set()
 	reschedule.set()
-	print("We're done")
+	log.info("We're done")
 
 
 if __name__ == "__main__":
 	if not USERAGENT:
-		print("missing useragent")
+		log.error("missing useragent")
 	elif not SUBREDDITS:
-		print("missing subreddits")
+		log.error("missing subreddits")
 	else:
 		run_bot()

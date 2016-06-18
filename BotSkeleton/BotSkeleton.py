@@ -69,7 +69,7 @@ def read_config_done():
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		log.error("%s not found.", DONE_CONFIGFILE)
+		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
 
 def write_config_done(done):
@@ -98,7 +98,7 @@ def run_bot():
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			log.error("Exception %s", e)
+			log.error("Exception %s", e, exc_info=True)
 
 		write_config_done(done)
 		log.info("sleep for %s s", SLEEP)

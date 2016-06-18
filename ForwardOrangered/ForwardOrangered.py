@@ -5,15 +5,11 @@ Written by /u/SmBe19
 
 import praw
 import time
-from getpass import getpass
+import logging
+import logging.handlers
+import OAuth2Util
 
 # ### USER CONFIGURATION ### #
-
-# The bot's username.
-USERNAME = ""
-
-# The bot's password.
-PASSWORD = ""
 
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
@@ -28,6 +24,14 @@ ACCOUNTS_CONFIGFILE = "accounts.txt"
 DONE_CONFIGFILE = "done.{0}.txt"
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -36,6 +40,21 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
+
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
 
 def read_accounts_config():
 	accounts = []
@@ -45,19 +64,19 @@ def read_accounts_config():
 				# username password forward_to reset_orangered active
 				acc = line.split("\t")
 				if len(acc) < 5:
-					print("not enough info for account", acc[0], ". Format is: username password forward_to reset_orangered active (with one tab between values)")
+					log.error("not enough info for account %s. Format is: username password forward_to reset_orangered active (with one tab between values)", acc[0])
 
 				if acc[4].strip().lower() == "true":
 					r = praw.Reddit(USERAGENT)
 					try:
-						r.login(acc[0].strip(), acc[1].strip())
+						r.login(acc[0].strip(), acc[1].strip(), disable_warning=True)
 					except praw.errors.InvalidUserPass:
-						print("Wrong password for account", acc[0])
+						log.error("Wrong password for account %s", acc[0])
 					else:
 						accounts.append((r, acc[2].strip(), acc[3].strip().lower() == "true"))
 
 	except OSError:
-		print(ACCOUNTS_CONFIGFILE, "not found.")
+		log.error("%s not found.", ACCOUNTS_CONFIGFILE)
 	return accounts
 
 def read_config_done(account):
@@ -68,7 +87,7 @@ def read_config_done(account):
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		print(DONE_CONFIGFILE.format(account), "not found.")
+		log.info("%s not found.", DONE_CONFIGFILE.format(account))
 	return done
 
 def write_config_done(done, account):
@@ -81,30 +100,29 @@ def write_config_done(done, account):
 # main procedure
 def run_bot():
 	r = praw.Reddit(USERAGENT)
-	try:
-		r.login(USERNAME, PASSWORD)
-	except praw.errors.InvalidUserPass:
-		print("Wrong password")
-		return
+	o = OAuth2Util.OAuth2Util(r)
 
-	print("Start bot")
+	log.info("Start bot")
 
 	while True:
 		try:
+			o.refresh()
 			accounts = read_accounts_config()
 			for account in accounts:
 				try:
-					print("check", account[0].user.name)
+					log.info("check %s", account[0].user.name)
 					message = ""
 					message_count = 0
 					done = read_config_done(account[0].user.name)
 					for msg in account[0].get_unread():
 						if msg.name in done:
 							continue
-						if msg.context:
+						if msg.context and msg.author:
 							this_message = "Comment from /u/{0}. [Link]({1}?context=10000)\n\n".format(msg.author.name, msg.permalink)
-						else:
+						elif msg.author:
 							this_message = "Message from /u/{0} ({1}).\n\n".format(msg.author.name, msg.subject)
+						else:
+							this_message = "Something from Someone.\n\n"
 						for line in msg.body.split("\n"):
 							this_message += "> " + line + "\n"
 						if account[2]:
@@ -116,29 +134,25 @@ def run_bot():
 					if message:
 						message = "Summary for account /u/{0} ({1}):{2}".format(account[0].user.name, message_count, message)
 						r.send_message(account[1], "Summary for account {0}: {1}".format(account[0].user.name, message_count), message)
-						print("Message sent")
+						log.info("Message sent")
 
 					write_config_done(done, account[0].user.name)
 				except KeyboardInterrupt:
-					break
+					raise
 				except Exception as e:
-					print("Exception", e)
+					log.error("Exception %s", e, exc_info=True)
 
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e, exc_info=True)
 
-		print("sleep for", SLEEP, "s")
+		log.info("sleep for %s s", SLEEP)
 		time.sleep(SLEEP)
 
 
 if __name__ == "__main__":
-	if not USERNAME:
-		print("missing username")
-	elif not USERAGENT:
-		print("missing useragent")
+	if not USERAGENT:
+		log.error("missing useragent")
 	else:
-		if not PASSWORD:
-			PASSWORD = getpass()
 		run_bot()

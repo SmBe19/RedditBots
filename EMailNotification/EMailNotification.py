@@ -6,6 +6,8 @@ Written by /u/SmBe19
 import praw
 import time
 import smtplib
+import logging
+import logging.handlers
 import OAuth2Util
 
 # ### USER CONFIGURATION ### #
@@ -67,6 +69,14 @@ DONE_CONFIGFILE = "done.txt"
 RULES_CONFIGFILE = "rules.txt"
 # ### END BOT CONFIGURATION ### #
 
+# ### LOGGING CONFIGURATION ### #
+LOG_LEVEL = logging.INFO
+LOG_FILENAME = "bot.log"
+LOG_FILE_BACKUPCOUNT = 5
+LOG_FILE_MAXSIZE = 1024 * 256
+# ### END LOGGING CONFIGURATION ### #
+
+# ### EXTERNAL CONFIG FILE ### #
 try:
 	# A file containing data for global constants.
 	import bot
@@ -75,6 +85,21 @@ try:
 			globals()[k.upper()] = getattr(bot, k)
 except ImportError:
 	pass
+# ### END EXTERNAL CONFIG FILE ### #
+
+# ### LOGGING SETUP ### #
+log = logging.getLogger("bot")
+log.setLevel(LOG_LEVEL)
+log_formatter = logging.Formatter('%(levelname)s: %(message)s')
+log_formatter_file = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+log_stderrHandler = logging.StreamHandler()
+log_stderrHandler.setFormatter(log_formatter)
+log.addHandler(log_stderrHandler)
+if LOG_FILENAME is not None:
+	log_fileHandler = logging.handlers.RotatingFileHandler(LOG_FILENAME, maxBytes=LOG_FILE_MAXSIZE, backupCount=LOG_FILE_BACKUPCOUNT)
+	log_fileHandler.setFormatter(log_formatter_file)
+	log.addHandler(log_fileHandler)
+# ### END LOGGING SETUP ### #
 
 def read_config_rules():
 	rules = []
@@ -85,7 +110,7 @@ def read_config_rules():
 					continue
 				rules.append([w.strip().lower() for w in line.split("\t")])
 	except OSError:
-		print(RULES_CONFIGFILE, "not found.")
+		log.error("%s not found.", RULES_CONFIGFILE)
 	return rules
 
 
@@ -97,7 +122,7 @@ def read_config_done():
 				if line.strip():
 					done.append(line.strip())
 	except OSError:
-		print(DONE_CONFIGFILE, "not found.")
+		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
 
 def write_config_done(done):
@@ -113,18 +138,18 @@ def send_email(recipient, subject, message):
 		try:
 			smtp.login(SMTP_USERNAME, SMTP_PASSWORD)
 		except smtplib.SMTPAuthenticationError:
-			print("Wrong email password")
+			log.error("Wrong email password")
 
 	try:
 		smtp.sendmail(SMTP_FROM, recipient, "Subject: {0}\n\n{1}".format(subject, message))
 	except Exception as e:
-		print("Error while sending mail", e)
+		log.error("Error while sending mail, %s", e, exc_info=True)
 	smtp.quit()
 
 def send_message(r, recipient, subject, message):
 	if recipient.startswith("/u/"):
 		if not r.is_oauth_session():
-			print("Recipient is Reddit user, but you are not logged in. Rule ignored.")
+			log.warning("Recipient is Reddit user, but you are not logged in. Rule ignored.")
 			return
 		r.send_message(r.get_redditor(recipient[3:]), subject, message)
 	else:
@@ -136,7 +161,7 @@ def run_bot():
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
 
-	print("Start bot")
+	log.info("Start bot")
 
 	done = read_config_done()
 
@@ -146,9 +171,9 @@ def run_bot():
 			rules = read_config_rules()
 			old_done = done[:]
 			for rule in rules:
-				print("process rule", rule[1])
+				log.info("process rule %s", rule[1])
 				if rule[0].startswith("/u/") and not r.is_oauth_session():
-					print("Recipient is Reddit user, but you are not logged in. Rule ignored.")
+					log.warning("Recipient is Reddit user, but you are not logged in. Rule ignored.")
 					continue
 				if rule[1] == "votesintime":
 					sub = r.get_subreddit(rule[2])
@@ -163,7 +188,7 @@ def run_bot():
 							if not BUILD_DONE_LIST:
 								send_message(r, rule[0], SUBJECT_VOTESINTIME_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 							done.append(post.name)
-							print("found new post for rule", rule[1])
+							log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "usernewpost":
 					redditor = r.get_redditor(rule[2])
@@ -173,7 +198,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERNEWPOST_TEXT.format(redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
-						print("found new post for rule", rule[1])
+						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "subnewpost":
 					sub = r.get_subreddit(rule[2])
@@ -183,7 +208,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_SUBNEWPOST_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
-						print("found new post for rule", rule[1])
+						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "userinsubnewpost":
 					redditor = r.get_redditor(rule[2])
@@ -193,7 +218,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERINSUBNEWPOST_TEXT.format(post.subreddit.display_name, redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
 						done.append(post.name)
-						print("found new post for rule", rule[1])
+						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "usernewcomment":
 					redditor = r.get_redditor(rule[2])
@@ -203,7 +228,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERNEWCOMMENT_TEXT.format(redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
 						done.append(comment.name)
-						print("found new comment for rule", rule[1])
+						log.info("found new comment for rule %s", rule[1])
 
 				elif rule[1] == "subnewcomment":
 					sub = r.get_subreddit(rule[2])
@@ -213,7 +238,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_SUBNEWCOMMENT_TEXT.format(sub.display_name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
 						done.append(comment.name)
-						print("found new comment for rule", rule[1])
+						log.info("found new comment for rule %s", rule[1])
 
 				elif rule[1] == "userinsubnewcomment":
 					redditor = r.get_redditor(rule[2])
@@ -223,7 +248,7 @@ def run_bot():
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERINSUBNEWCOMMENT_TEXT.format(comment.subreddit.display_name, redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
 						done.append(comment.name)
-						print("found new comment for rule", rule[1])
+						log.info("found new comment for rule %s", rule[1])
 
 				write_config_done(done)
 
@@ -231,10 +256,10 @@ def run_bot():
 		except KeyboardInterrupt:
 			break
 		except Exception as e:
-			print("Exception", e)
+			log.error("Exception %s", e, exc_info=True)
 
 		write_config_done(done)
-		print("sleep for", SLEEP, "s")
+		log.info("sleep for %s s", SLEEP)
 		time.sleep(SLEEP)
 
 	write_config_done(done)
@@ -242,6 +267,6 @@ def run_bot():
 
 if __name__ == "__main__":
 	if not USERAGENT:
-		print("missing useragent")
+		log.error("missing useragent")
 	else:
 		run_bot()
