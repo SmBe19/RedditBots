@@ -15,8 +15,8 @@ import ScheduledPost
 # The bot's useragent. It should contain a short description of what it does and your username. e.g. "RSS Bot by /u/SmBe19"
 USERAGENT = ""
 
-# The name of the subreddit to post to. e.g. "funny"
-SUBREDDIT = ""
+# The name of the subreddits to post to. e.g. "funny"
+SUBREDDITS = ["", ""]
 
 # The time in seconds the bot should sleep until it checks the inbox again.
 SLEEP_INBOX = 60
@@ -52,36 +52,57 @@ def repl_date(matchobj):
 class Poster (threading.Thread):
 	lock = threading.Lock()
 
-	def __init__(self, o, sub, reschedule, weredone):
+	def __init__(self, o, subs, reschedule, weredone):
 		threading.Thread.__init__(self)
 		self.o = o
-		self.sub = sub
+		self.subs = subs
 		self.reschedule = reschedule
 		self.weredone = weredone
 
 	def run(self):
 		while True:
-			scheduled_posts = ScheduledPost.read_config(self.sub)
+			Poster.lock.acquire()
+			scheduled_posts = []
+			for sub in self.subs:
+				scheduled_posts.extend(ScheduledPost.read_config(sub))
+			Poster.lock.release()
 
 			while True:
 				try:
+					Poster.lock.acquire()
 					self.o.refresh()
+					Poster.lock.release()
+
 					sleep_time = float("inf")
 					nextPost = None
 					for p in scheduled_posts:
 						if p.get_time_until_next_post() < sleep_time:
 							sleep_time = p.get_time_until_next_post()
 							nextPost = p
-					print("sleep submission for", sleep_time, "s")
+					nextPostNumber = nextPost.get_next_post_number()
+					assert nextPostNumber >= 0 or sleep_time == float("inf")
+					print("sleep submission for", sleep_time, "s (", time.strftime("%d.%m.%Y %H:%M", time.localtime(nextPost.get_next_post_time())), ")")
+
 					if sleep_time == float("inf"):
 						self.reschedule.wait()
 					elif not self.reschedule.wait(sleep_time):
 						Poster.lock.acquire()
-						titleFormatted = nextPost.title
+						titles = nextPost.title.split("\n")
+						titleFormatted = titles[nextPostNumber % len(titles)]
 						titleFormatted = DATE_RE.sub(repl_date, titleFormatted)
 						textFormatted = nextPost.text
-						textFormatted = DATE_RE.sub(repl_date, textFormatted)
-						submission = self.sub.submit(titleFormatted, textFormatted)
+						if textFormatted is not None:
+							textFormatted = DATE_RE.sub(repl_date, textFormatted)
+						if nextPost.link is not None:
+							links = nextPost.link.split("\n")
+							link = links[nextPostNumber % len(links)]
+							submission = nextPost.sub.submit(titleFormatted, url=link, resubmit=True)
+							if textFormatted is not None and len(textFormatted) > 0:
+								submission.add_comment(textFormatted)
+						else:
+							if textFormatted is None:
+								textFormatted = "..."
+							submission = nextPost.sub.submit(titleFormatted, textFormatted)
 						submission.set_flair(flair_text=nextPost.flair_text, flair_css_class=nextPost.flair_css)
 						if nextPost.distinguish:
 							submission.distinguish()
@@ -104,6 +125,8 @@ class Poster (threading.Thread):
 					print("Exception", e)
 					import traceback
 					traceback.print_exc()
+					Poster.lock.acquire(False)
+					Poster.lock.release()
 
 			if self.weredone.is_set():
 				break
@@ -113,14 +136,14 @@ def run_bot():
 	r = praw.Reddit(USERAGENT)
 	o = OAuth2Util.OAuth2Util(r)
 	o.refresh()
-	sub = r.get_subreddit(SUBREDDIT)
+	subs = [r.get_subreddit(x) for x in SUBREDDITS]
 
-	print("Start bot for subreddit", SUBREDDIT)
+	print("Start bot for subreddits", SUBREDDITS)
 
 	reschedule = threading.Event()
 	weredone = threading.Event()
 
-	thread = Poster(o, sub, reschedule, weredone)
+	thread = Poster(o, subs, reschedule, weredone)
 	thread.deamon = True
 	thread.start()
 
@@ -139,6 +162,8 @@ def run_bot():
 			print("Exception", e)
 			import traceback
 			traceback.print_exc()
+			Poster.lock.acquire(False)
+			Poster.lock.release()
 
 	weredone.set()
 	reschedule.set()
@@ -148,7 +173,7 @@ def run_bot():
 if __name__ == "__main__":
 	if not USERAGENT:
 		print("missing useragent")
-	elif not SUBREDDIT:
-		print("missing subreddit")
+	elif not SUBREDDITS:
+		print("missing subreddits")
 	else:
 		run_bot()

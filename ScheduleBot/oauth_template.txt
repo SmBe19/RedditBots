@@ -1,7 +1,7 @@
 # Rename this file to oauth.ini
 
 [app]
-scope=submit,privatemessages
+scope=submit,privatemessages,modflair
 refreshable=True
 app_key=thisistheid
 app_secret=ThisIsTheSecretDoNotShare
