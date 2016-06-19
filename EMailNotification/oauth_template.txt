@@ -1,7 +1,7 @@
 # Rename this file to oauth.ini
 
 [app]
-scope=identity,read,privatemessages
+scope=identity,read,privatemessages,history
 refreshable=True
 app_key=thisistheid
 app_secret=ThisIsTheSecretDoNotShare
