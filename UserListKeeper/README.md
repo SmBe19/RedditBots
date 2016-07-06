@@ -1,0 +1,2 @@
+# UserListKeeper
+Keeps a list of users that meet a certain criteria (e.g. they have a post with a certain link flair). The list is kept in a wiki page. If an entry is older than some treshold it is removed.
