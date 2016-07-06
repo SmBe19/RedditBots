@@ -62,12 +62,12 @@ if LOG_FILENAME is not None:
 
 # ### DONE CONFIG FILE ### #
 def read_config_done():
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE, "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		log.info("%s not found.", DONE_CONFIGFILE)
 	return done

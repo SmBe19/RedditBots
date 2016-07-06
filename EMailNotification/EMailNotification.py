@@ -115,12 +115,12 @@ def read_config_rules():
 
 
 def read_config_done():
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE, "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
@@ -187,7 +187,7 @@ def run_bot():
 								continue
 							if not BUILD_DONE_LIST:
 								send_message(r, rule[0], SUBJECT_VOTESINTIME_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
-							done.append(post.name)
+							done.add(post.name)
 							log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "usernewpost":
@@ -197,7 +197,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERNEWPOST_TEXT.format(redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
-						done.append(post.name)
+						done.add(post.name)
 						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "subnewpost":
@@ -207,7 +207,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_SUBNEWPOST_TEXT.format(sub.display_name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
-						done.append(post.name)
+						done.add(post.name)
 						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "userinsubnewpost":
@@ -217,7 +217,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERINSUBNEWPOST_TEXT.format(post.subreddit.display_name, redditor.name), BODY_TEXT.format(post.permalink, post.title, post.url, post.selftext))
-						done.append(post.name)
+						done.add(post.name)
 						log.info("found new post for rule %s", rule[1])
 
 				elif rule[1] == "usernewcomment":
@@ -227,7 +227,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERNEWCOMMENT_TEXT.format(redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
-						done.append(comment.name)
+						done.add(comment.name)
 						log.info("found new comment for rule %s", rule[1])
 
 				elif rule[1] == "subnewcomment":
@@ -237,7 +237,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_SUBNEWCOMMENT_TEXT.format(sub.display_name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
-						done.append(comment.name)
+						done.add(comment.name)
 						log.info("found new comment for rule %s", rule[1])
 
 				elif rule[1] == "userinsubnewcomment":
@@ -247,7 +247,7 @@ def run_bot():
 							continue
 						if not BUILD_DONE_LIST:
 							send_message(r, rule[0], SUBJECT_USERINSUBNEWCOMMENT_TEXT.format(comment.subreddit.display_name, redditor.name), BODY_TEXT.format(comment.permalink, comment.link_title, comment.link_url, comment.body))
-						done.append(comment.name)
+						done.add(comment.name)
 						log.info("found new comment for rule %s", rule[1])
 
 				write_config_done(done)

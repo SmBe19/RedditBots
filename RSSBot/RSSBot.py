@@ -80,12 +80,12 @@ def read_config_sources():
 	return sources
 
 def read_config_done():
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE, "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
@@ -119,7 +119,7 @@ def run_bot():
 
 			for article in newArticles:
 				if article[3] not in done:
-					done.append(article[3])
+					done.add(article[3])
 					try:
 						submission = sub.submit(article[0], url=article[1], resubmit=RESUBMIT_ANYWAYS)
 						if POST_DESCRIPTION and article[2] is not None:

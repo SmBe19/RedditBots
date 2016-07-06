@@ -80,12 +80,12 @@ def read_accounts_config():
 	return accounts
 
 def read_config_done(account):
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE.format(account), "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		log.info("%s not found.", DONE_CONFIGFILE.format(account))
 	return done
@@ -129,7 +129,7 @@ def run_bot():
 							msg.mark_as_read()
 						message += "\n\n" + this_message
 						message_count += 1
-						done.append(msg.name)
+						done.add(msg.name)
 
 					if message:
 						message = "Summary for account /u/{0} ({1}):{2}".format(account[0].user.name, message_count, message)

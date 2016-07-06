@@ -126,12 +126,12 @@ def write_config_progress(progress):
 			f.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(key, progress[key][0][0], str(progress[key][0][1]), progress[key][1][0], str(progress[key][1][1])))
 
 def read_config_done():
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE, "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		log.info("%s not found.", DONE_CONFIGFILE)
 	return done
@@ -201,7 +201,7 @@ def run_bot():
 							log.info("register new game: %s", match.group(0))
 							if match.group(2).lower() == match.group(3).lower():
 								comment.reply(BOT_ERROR_SAME_USER + BOT_SIGNATURE)
-								done.append(comment.name)
+								done.add(comment.name)
 								log.info("Same user!")
 								continue
 
@@ -223,7 +223,7 @@ def run_bot():
 							if progress[comment.parent_id][0][1] and progress[comment.parent_id][1][1]:
 								set_new_elo(progress[comment.parent_id][0][0], progress[comment.parent_id][1][0], elo, sub)
 								conf = CONFIRMATION_TEXT.format(progress[comment.parent_id][0][0], elo[progress[comment.parent_id][0][0]], progress[comment.parent_id][1][0], elo[progress[comment.parent_id][1][0]])
-								done.append(comment.parent_id)
+								done.add(comment.parent_id)
 								del progress[comment.parent_id]
 								parent = r.get_info(thing_id=comment.parent_id)
 								parent.reply(conf + BOT_SIGNATURE)

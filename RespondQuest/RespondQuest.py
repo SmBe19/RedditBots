@@ -43,12 +43,12 @@ except ImportError:
 	pass
 
 def read_config_done():
-	done = []
+	done = set()
 	try:
 		with open(DONE_CONFIGFILE, "r") as f:
 			for line in f:
 				if line.strip():
-					done.append(line.strip())
+					done.add(line.strip())
 	except OSError:
 		print(DONE_CONFIGFILE, "not found.")
 	return done
@@ -95,7 +95,7 @@ def run_bot():
 							post.report(REPORT_MESSAGE)
 							print("reported")
 
-						done.append(post.name)
+						done.add(post.name)
 
 		# Allows the bot to exit on ^C, all other exceptions are ignored
 		except KeyboardInterrupt:
