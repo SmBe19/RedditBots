@@ -9,13 +9,13 @@ Add the text you want to be posted as body
 
 	proxy#self subreddit
 
-  Fancy Title
+	Fancy Title
 
-  This is the text,
+	This is the text,
 
-  it can be many lines long!
+	it can be many lines long!
 
-  Even three? Yes!!!
+	Even three? Yes!!!
 
 ## Link Post
 
@@ -23,9 +23,9 @@ Add the link you want to be posted as body
 
 	proxy#link subreddit
 
-  Fancy Title
+	Fancy Title
 
-  http://fancy.example.org
+	http://fancy.example.org
 
 ## Toplevel Comment
 
@@ -33,16 +33,16 @@ Use a link to the submission you want to post a toplevel comment to.
 
 	proxy#topcomment https://www.reddit.com/r/RequestABot/comments/4r3v8i/rneedamod_bot_to_pull_usernames_to_the_wiki/
 
-  A long comment,
+	A long comment,
 
-  that can span several lines!!!
+	that can span several lines!!!
 
 ## Comment
 
 Use a permalink to the comment you want to reply to.
 
-  proxy#comment https://www.reddit.com/r/RequestABot/comments/4r3v8i/rneedamod_bot_to_pull_usernames_to_the_wiki/d51tarb
+	proxy#comment https://www.reddit.com/r/RequestABot/comments/4r3v8i/rneedamod_bot_to_pull_usernames_to_the_wiki/d51tarb
 
-  A long comment,
+	A long comment,
 
-  that can span several lines!!!
+	that can span several lines!!!
