@@ -1,0 +1,18 @@
+# Rename this file to oauth.ini
+
+[app]
+scope=identity,submit,privatemessages
+refreshable=True
+app_key=thisistheid
+app_secret=ThisIsTheSecretDoNotShare
+
+[server]
+server_mode=False
+url=127.0.0.1
+port=65010
+redirect_path=authorize_callback
+link_path=oauth
+
+[token]
+token=None
+refresh_token=None
